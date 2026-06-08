@@ -59,6 +59,7 @@ function RootLayoutNav() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="new-task" options={{ presentation: 'modal', headerShown: false }} />
+        <Stack.Screen name="focus-mode" options={{ presentation: 'fullScreenModal', headerShown: false }} />
       </Stack>
     </ThemeProvider>
   );

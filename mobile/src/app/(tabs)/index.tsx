@@ -24,8 +24,10 @@ import {
 } from 'lucide-react-native'
 import { useAuthStore } from '@/store/useAuthStore'
 import { useTaskStore } from '@/store/useTaskStore'
+import { useRouter } from 'expo-router'
 
 export default function HomeScreen() {
+  const router = useRouter()
   const { user, logout } = useAuthStore()
   const tasks = useTaskStore((state) => state.tasks)
   const togglePlayPause = useTaskStore((state) => state.togglePlayPause)
@@ -216,55 +218,59 @@ export default function HomeScreen() {
 
         {/* Running Timer Card */}
         {timerCandidate ? (
-          <LinearGradient
-            colors={['#4e5ddb', '#a855f7']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.timerCard}
+          <Pressable
+            onPress={() => router.push({ pathname: '/focus-mode', params: { taskId: timerCandidate.id } })}
           >
-            <View style={styles.timerHeader}>
-              <View style={styles.timerStatus}>
-                <View style={[styles.timerPulseDot, timerCandidate.isTracking && { backgroundColor: '#10b981' }]} />
-                <Text style={styles.timerStatusLabel}>
-                  {timerCandidate.isTracking ? 'RUNNING TIMER' : 'TIMER PAUSED'}
-                </Text>
+            <LinearGradient
+              colors={['#4e5ddb', '#a855f7']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.timerCard}
+            >
+              <View style={styles.timerHeader}>
+                <View style={styles.timerStatus}>
+                  <View style={[styles.timerPulseDot, timerCandidate.isTracking && { backgroundColor: '#10b981' }]} />
+                  <Text style={styles.timerStatusLabel}>
+                    {timerCandidate.isTracking ? 'RUNNING TIMER' : 'TIMER PAUSED'}
+                  </Text>
+                </View>
+                <View style={[styles.activeBadge, !timerCandidate.isTracking && { backgroundColor: 'rgba(255,255,255,0.1)' }]}>
+                  <Text style={styles.activeBadgeText}>
+                    {timerCandidate.isTracking ? 'Active' : 'Paused'}
+                  </Text>
+                </View>
               </View>
-              <View style={[styles.activeBadge, !timerCandidate.isTracking && { backgroundColor: 'rgba(255,255,255,0.1)' }]}>
-                <Text style={styles.activeBadgeText}>
-                  {timerCandidate.isTracking ? 'Active' : 'Paused'}
-                </Text>
-              </View>
-            </View>
-            <Text style={styles.timerTaskName}>{timerCandidate.title}</Text>
+              <Text style={styles.timerTaskName}>{timerCandidate.title}</Text>
 
-            <View style={styles.timerControlsRow}>
-              <Text style={styles.timerDigits}>{formatTime(seconds)}</Text>
-              <View style={styles.timerActions}>
-                <Pressable
-                  onPress={handlePlayPauseTimer}
-                  style={({ pressed }) => [
-                    styles.timerActionButton,
-                    pressed && styles.buttonPressed
-                  ]}
-                >
-                  {timerCandidate.isTracking ? (
-                    <Pause size={20} color="#ffffff" />
-                  ) : (
-                    <Play size={20} color="#ffffff" style={{ marginLeft: 2 }} />
-                  )}
-                </Pressable>
-                <Pressable
-                  onPress={handleStopTimer}
-                  style={({ pressed }) => [
-                    styles.timerStopButton,
-                    pressed && styles.buttonPressed
-                  ]}
-                >
-                  <Square size={20} color="#4e5ddb" fill="#4e5ddb" />
-                </Pressable>
+              <View style={styles.timerControlsRow}>
+                <Text style={styles.timerDigits}>{formatTime(seconds)}</Text>
+                <View style={styles.timerActions}>
+                  <Pressable
+                    onPress={handlePlayPauseTimer}
+                    style={({ pressed }) => [
+                      styles.timerActionButton,
+                      pressed && styles.buttonPressed
+                    ]}
+                  >
+                    {timerCandidate.isTracking ? (
+                      <Pause size={20} color="#ffffff" />
+                    ) : (
+                      <Play size={20} color="#ffffff" style={{ marginLeft: 2 }} />
+                    )}
+                  </Pressable>
+                  <Pressable
+                    onPress={handleStopTimer}
+                    style={({ pressed }) => [
+                      styles.timerStopButton,
+                      pressed && styles.buttonPressed
+                    ]}
+                  >
+                    <Square size={20} color="#4e5ddb" fill="#4e5ddb" />
+                  </Pressable>
+                </View>
               </View>
-            </View>
-          </LinearGradient>
+            </LinearGradient>
+          </Pressable>
         ) : (
           <View style={[styles.timerCard, { backgroundColor: '#171717', alignItems: 'center', justifyContent: 'center', height: 120 }]}>
             <Text style={{ color: '#a1a1a1', fontSize: 15 }}>No tasks created yet</Text>
