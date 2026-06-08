@@ -23,29 +23,64 @@ import {
   Check
 } from 'lucide-react-native'
 import { useAuthStore } from '@/store/useAuthStore'
+import { useTaskStore } from '@/store/useTaskStore'
 
 export default function HomeScreen() {
   const { user, logout } = useAuthStore()
+  const tasks = useTaskStore((state) => state.tasks)
+  const togglePlayPause = useTaskStore((state) => state.togglePlayPause)
+  const toggleComplete = useTaskStore((state) => state.toggleComplete)
+  const incrementLoggedTime = useTaskStore((state) => state.incrementLoggedTime)
 
-  // Timer state (starts at 01:23:45 = 5025 seconds)
-  const [seconds, setSeconds] = useState(5025)
-  const [timerActive, setTimerActive] = useState(true)
+  // Find active tracking task
+  const activeTask = tasks.find((t) => t.isTracking)
+  
+  // Decide which task the timer card should reference
+  const timerCandidate = activeTask || tasks.find((t) => t.status !== 'Completed') || tasks[0]
+
+  // Track seconds for active task countdown/tick smoothly, adjusting during rendering if candidate changes
+  const [prevCandidateId, setPrevCandidateId] = useState<string | undefined>(timerCandidate?.id)
+  const [seconds, setSeconds] = useState(() => timerCandidate ? Math.round(timerCandidate.loggedTime * 3600) : 0)
+
+  if (timerCandidate?.id !== prevCandidateId) {
+    setPrevCandidateId(timerCandidate?.id)
+    setSeconds(timerCandidate ? Math.round(timerCandidate.loggedTime * 3600) : 0)
+  }
 
   useEffect(() => {
     let interval: any = null
 
-    if (timerActive) {
+    if (activeTask && activeTask.isTracking) {
       interval = setInterval(() => {
         setSeconds((prev) => prev + 1)
+        incrementLoggedTime(activeTask.id, 1 / 3600)
       }, 1000)
-    } else if (!timerActive && interval) {
-      clearInterval(interval)
     }
 
     return () => {
       if (interval) clearInterval(interval)
     }
-  }, [timerActive])
+  }, [activeTask, incrementLoggedTime])
+
+  // Stats calculation
+  const totalTasksCount = tasks.length
+  const completedTasks = tasks.filter((t) => t.status === 'Completed')
+  const completedCount = completedTasks.length
+
+  const progressPercent = totalTasksCount > 0 ? Math.round((completedCount / totalTasksCount) * 100) : 0
+  const progressText = `${completedCount}/${totalTasksCount}`
+
+  // Focus time calculation
+  const totalFocusHours = tasks.reduce((sum, t) => sum + t.loggedTime, 0)
+  const focusHrs = Math.floor(totalFocusHours)
+  const focusMins = Math.round((totalFocusHours - focusHrs) * 60)
+  const focusTimeStr = focusHrs > 0 ? `${focusHrs}h ${focusMins}m` : `${focusMins}m`
+
+  // XP level calculation
+  const totalXp = 1000 + completedCount * 80
+  const currentLevel = Math.floor(totalXp / 500)
+  const levelXpProgress = totalXp % 500
+  const levelXpPercent = `${(levelXpProgress / 500) * 100}%`
 
   // Format seconds to HH:MM:SS
   const formatTime = (totalSecs: number) => {
@@ -66,6 +101,18 @@ export default function HomeScreen() {
         { text: 'Sign Out', style: 'destructive', onPress: logout }
       ]
     )
+  }
+
+  const handlePlayPauseTimer = () => {
+    if (timerCandidate) {
+      togglePlayPause(timerCandidate.id)
+    }
+  }
+
+  const handleStopTimer = () => {
+    if (timerCandidate) {
+      toggleComplete(timerCandidate.id)
+    }
   }
 
   return (
@@ -94,14 +141,14 @@ export default function HomeScreen() {
         <View style={styles.xpSection}>
           <View style={styles.xpBadge}>
             <Sparkles size={14} color="#a0b4fc" style={{ marginRight: 4 }} />
-            <Text style={styles.xpBadgeText}>Level 3 · 1,240 XP</Text>
+            <Text style={styles.xpBadgeText}>Level {currentLevel} · {totalXp} XP</Text>
           </View>
           <View style={styles.progressBarBg}>
             <LinearGradient
               colors={['#4e5ddb', '#a855f7']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
-              style={[styles.progressBarFill, { width: '62%' }]}
+              style={[styles.progressBarFill, { width: levelXpPercent as any }]}
             />
           </View>
         </View>
@@ -117,8 +164,8 @@ export default function HomeScreen() {
               </View>
               <View style={styles.cardBodyRow}>
                 {/* Simulated conic circle indicator */}
-                <View style={styles.circleProgress}>
-                  <Text style={styles.circleProgressText}>6/10</Text>
+                <View style={[styles.circleProgress, { borderLeftColor: progressPercent > 0 ? '#10b981' : '#262626', borderTopColor: progressPercent > 25 ? '#10b981' : '#262626' }]}>
+                  <Text style={styles.circleProgressText}>{progressText}</Text>
                 </View>
                 <View style={styles.cardTextCol}>
                   <Text style={styles.cardBoldValue}>Tasks</Text>
@@ -134,7 +181,7 @@ export default function HomeScreen() {
                 <Clock size={16} color="#a855f7" />
               </View>
               <View style={styles.cardBodyCol}>
-                <Text style={styles.cardBigVal}>2h 14m</Text>
+                <Text style={styles.cardBigVal}>{focusTimeStr}</Text>
                 <Text style={styles.cardSubtitle}>focused today</Text>
               </View>
             </View>
@@ -148,8 +195,8 @@ export default function HomeScreen() {
                 <TrendingUp size={16} color="#a3e635" />
               </View>
               <View style={styles.cardBodyCol}>
-                <Text style={styles.cardBigVal}>84%</Text>
-                <Text style={styles.cardGreenVal}>+6% vs yesterday</Text>
+                <Text style={styles.cardBigVal}>{progressPercent}%</Text>
+                <Text style={styles.cardGreenVal}>{progressPercent > 50 ? '+6% vs yesterday' : '0% vs yesterday'}</Text>
               </View>
             </View>
 
@@ -168,54 +215,61 @@ export default function HomeScreen() {
         </View>
 
         {/* Running Timer Card */}
-        <LinearGradient
-          colors={['#4e5ddb', '#a855f7']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.timerCard}
-        >
-          <View style={styles.timerHeader}>
-            <View style={styles.timerStatus}>
-              <View style={styles.timerPulseDot} />
-              <Text style={styles.timerStatusLabel}>RUNNING TIMER</Text>
+        {timerCandidate ? (
+          <LinearGradient
+            colors={['#4e5ddb', '#a855f7']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.timerCard}
+          >
+            <View style={styles.timerHeader}>
+              <View style={styles.timerStatus}>
+                <View style={[styles.timerPulseDot, timerCandidate.isTracking && { backgroundColor: '#10b981' }]} />
+                <Text style={styles.timerStatusLabel}>
+                  {timerCandidate.isTracking ? 'RUNNING TIMER' : 'TIMER PAUSED'}
+                </Text>
+              </View>
+              <View style={[styles.activeBadge, !timerCandidate.isTracking && { backgroundColor: 'rgba(255,255,255,0.1)' }]}>
+                <Text style={styles.activeBadgeText}>
+                  {timerCandidate.isTracking ? 'Active' : 'Paused'}
+                </Text>
+              </View>
             </View>
-            <View style={styles.activeBadge}>
-              <Text style={styles.activeBadgeText}>Active</Text>
-            </View>
-          </View>
-          <Text style={styles.timerTaskName}>Fix Auth Bug</Text>
+            <Text style={styles.timerTaskName}>{timerCandidate.title}</Text>
 
-          <View style={styles.timerControlsRow}>
-            <Text style={styles.timerDigits}>{formatTime(seconds)}</Text>
-            <View style={styles.timerActions}>
-              <Pressable
-                onPress={() => setTimerActive(!timerActive)}
-                style={({ pressed }) => [
-                  styles.timerActionButton,
-                  pressed && styles.buttonPressed
-                ]}
-              >
-                {timerActive ? (
-                  <Pause size={20} color="#ffffff" />
-                ) : (
-                  <Play size={20} color="#ffffff" style={{ marginLeft: 2 }} />
-                )}
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  setTimerActive(false)
-                  setSeconds(0)
-                }}
-                style={({ pressed }) => [
-                  styles.timerStopButton,
-                  pressed && styles.buttonPressed
-                ]}
-              >
-                <Square size={20} color="#4e5ddb" fill="#4e5ddb" />
-              </Pressable>
+            <View style={styles.timerControlsRow}>
+              <Text style={styles.timerDigits}>{formatTime(seconds)}</Text>
+              <View style={styles.timerActions}>
+                <Pressable
+                  onPress={handlePlayPauseTimer}
+                  style={({ pressed }) => [
+                    styles.timerActionButton,
+                    pressed && styles.buttonPressed
+                  ]}
+                >
+                  {timerCandidate.isTracking ? (
+                    <Pause size={20} color="#ffffff" />
+                  ) : (
+                    <Play size={20} color="#ffffff" style={{ marginLeft: 2 }} />
+                  )}
+                </Pressable>
+                <Pressable
+                  onPress={handleStopTimer}
+                  style={({ pressed }) => [
+                    styles.timerStopButton,
+                    pressed && styles.buttonPressed
+                  ]}
+                >
+                  <Square size={20} color="#4e5ddb" fill="#4e5ddb" />
+                </Pressable>
+              </View>
             </View>
+          </LinearGradient>
+        ) : (
+          <View style={[styles.timerCard, { backgroundColor: '#171717', alignItems: 'center', justifyContent: 'center', height: 120 }]}>
+            <Text style={{ color: '#a1a1a1', fontSize: 15 }}>No tasks created yet</Text>
           </View>
-        </LinearGradient>
+        )}
 
         {/* Completed Tasks Section */}
         <View style={styles.tasksSection}>
@@ -223,7 +277,7 @@ export default function HomeScreen() {
             <View style={styles.tasksTitleRow}>
               <Text style={styles.sectionTitle}>Today&apos;s Completed Tasks</Text>
               <View style={styles.countBadge}>
-                <Text style={styles.countBadgeText}>3</Text>
+                <Text style={styles.countBadgeText}>{completedCount}</Text>
               </View>
             </View>
             <Pressable>
@@ -231,53 +285,55 @@ export default function HomeScreen() {
             </Pressable>
           </View>
 
-          {/* Task 1 */}
-          <View style={styles.taskCard}>
-            <View style={styles.taskLeft}>
-              <View style={styles.checkIconBg}>
-                <Check size={16} color="#10b981" strokeWidth={3} />
-              </View>
-              <View style={styles.taskMeta}>
-                <Text style={styles.taskName}>Refactor API routes</Text>
-                <View style={[styles.taskTag, styles.backendTag]}>
-                  <Text style={styles.backendTagText}>Backend</Text>
-                </View>
-              </View>
+          {completedTasks.length === 0 ? (
+            <View style={[styles.taskCard, { justifyContent: 'center', opacity: 0.5 }]}>
+              <Text style={{ color: '#a1a1a1', fontSize: 14 }}>No completed tasks today</Text>
             </View>
-            <Text style={styles.taskDuration}>48m</Text>
-          </View>
+          ) : (
+            completedTasks.slice(0, 3).map((task) => {
+              const totalMinutes = Math.round(task.loggedTime * 60)
+              const durationStr = totalMinutes >= 60 
+                ? `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`
+                : `${totalMinutes}m`
 
-          {/* Task 2 */}
-          <View style={styles.taskCard}>
-            <View style={styles.taskLeft}>
-              <View style={styles.checkIconBg}>
-                <Check size={16} color="#10b981" strokeWidth={3} />
-              </View>
-              <View style={styles.taskMeta}>
-                <Text style={styles.taskName}>Update onboarding UI</Text>
-                <View style={[styles.taskTag, styles.designTag]}>
-                  <Text style={styles.designTagText}>Design</Text>
-                </View>
-              </View>
-            </View>
-            <Text style={styles.taskDuration}>1h 12m</Text>
-          </View>
+              let tagBg = 'rgba(78, 93, 219, 0.15)'
+              let tagText = '#a0b4fc'
+              
+              const catLower = task.category.toLowerCase()
+              if (catLower === 'backend') {
+                tagBg = 'rgba(78, 93, 219, 0.15)'
+                tagText = '#a0b4fc'
+              } else if (catLower === 'design' || catLower === 'frontend') {
+                tagBg = 'rgba(168, 85, 247, 0.15)'
+                tagText = '#d8b4fe'
+              } else if (catLower === 'testing' || catLower === 'devops') {
+                tagBg = 'rgba(163, 230, 53, 0.15)'
+                tagText = '#bef264'
+              } else {
+                tagBg = '#262626'
+                tagText = '#a1a1a1'
+              }
 
-          {/* Task 3 */}
-          <View style={styles.taskCard}>
-            <View style={styles.taskLeft}>
-              <View style={styles.checkIconBg}>
-                <Check size={16} color="#10b981" strokeWidth={3} />
-              </View>
-              <View style={styles.taskMeta}>
-                <Text style={styles.taskName}>Write unit tests</Text>
-                <View style={[styles.taskTag, styles.testingTag]}>
-                  <Text style={styles.testingTagText}>Testing</Text>
+              return (
+                <View key={task.id} style={styles.taskCard}>
+                  <View style={styles.taskLeft}>
+                    <View style={styles.checkIconBg}>
+                      <Check size={16} color="#10b981" strokeWidth={3} />
+                    </View>
+                    <View style={styles.taskMeta}>
+                      <Text style={styles.taskName}>{task.title}</Text>
+                      <View style={[styles.taskTag, { backgroundColor: tagBg }]}>
+                        <Text style={{ color: tagText, fontSize: 10, fontWeight: '600' }}>
+                          {task.category}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                  <Text style={styles.taskDuration}>{durationStr}</Text>
                 </View>
-              </View>
-            </View>
-            <Text style={styles.taskDuration}>34m</Text>
-          </View>
+              )
+            })
+          )}
         </View>
 
       </ScrollView>

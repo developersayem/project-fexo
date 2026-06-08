@@ -5,10 +5,10 @@ import {
   View,
   ScrollView,
   Pressable,
-  Alert,
   Platform
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { useRouter } from 'expo-router'
 import {
   Clock,
   Timer as TimerIcon,
@@ -17,81 +17,17 @@ import {
   Check,
   Plus
 } from 'lucide-react-native'
-
-interface Task {
-  id: string
-  title: string
-  priority: 'Critical' | 'High' | 'Medium' | 'Low'
-  priorityColor: string
-  category: string
-  estimatedTime: string
-  loggedTime: number // in hours
-  status: 'In Progress' | 'Pending' | 'Completed'
-  isTracking: boolean
-}
+import { useTaskStore } from '@/store/useTaskStore'
 
 export default function TasksScreen() {
+  const router = useRouter()
+  const tasks = useTaskStore((state) => state.tasks)
+  const togglePlayPause = useTaskStore((state) => state.togglePlayPause)
+  const toggleComplete = useTaskStore((state) => state.toggleComplete)
+  const incrementLoggedTime = useTaskStore((state) => state.incrementLoggedTime)
+
   // Filter state: 'Today' | 'All' | 'In Progress' | 'Completed'
   const [activeFilter, setActiveFilter] = useState<'Today' | 'All' | 'In Progress' | 'Completed'>('Today')
-
-  // Tasks state
-  const [tasks, setTasks] = useState<Task[]>([
-    {
-      id: '1',
-      title: 'Fix payment gateway timeout',
-      priority: 'Critical',
-      priorityColor: '#ef4444', // Red
-      category: 'Backend',
-      estimatedTime: '4h',
-      loggedTime: 2.5,
-      status: 'In Progress',
-      isTracking: true
-    },
-    {
-      id: '2',
-      title: 'Redesign onboarding flow screens',
-      priority: 'High',
-      priorityColor: '#f97316', // Orange
-      category: 'Frontend',
-      estimatedTime: '6h',
-      loggedTime: 1.0,
-      status: 'Pending',
-      isTracking: false
-    },
-    {
-      id: '3',
-      title: 'Configure CI/CD pipeline cache',
-      priority: 'Medium',
-      priorityColor: '#eab308', // Yellow
-      category: 'DevOps',
-      estimatedTime: '3h',
-      loggedTime: 3.2,
-      status: 'In Progress',
-      isTracking: false
-    },
-    {
-      id: '4',
-      title: 'Update API reference for v2 endpoints',
-      priority: 'Low',
-      priorityColor: '#10b981', // Green
-      category: 'Docs',
-      estimatedTime: '2h',
-      loggedTime: 0,
-      status: 'Pending',
-      isTracking: false
-    },
-    {
-      id: '5',
-      title: 'Add rate limiting middleware',
-      priority: 'Low',
-      priorityColor: '#10b981', // Green
-      category: 'Backend',
-      estimatedTime: '2h',
-      loggedTime: 1.8,
-      status: 'Completed',
-      isTracking: false
-    }
-  ])
 
   // Timer simulation for active tracking task
   useEffect(() => {
@@ -100,87 +36,26 @@ export default function TasksScreen() {
     const trackingTask = tasks.find((t) => t.isTracking)
     if (trackingTask) {
       interval = setInterval(() => {
-        setTasks((prevTasks) =>
-          prevTasks.map((t) => {
-            if (t.isTracking) {
-              // Increment logged time by ~1 minute in hours (1/60th of an hour)
-              const updatedTime = Number((t.loggedTime + 0.01).toFixed(2))
-              return { ...t, loggedTime: updatedTime }
-            }
-            return t
-          })
-        )
+        // Increment logged time by ~1 minute in hours (0.01 hours)
+        incrementLoggedTime(trackingTask.id, 0.01)
       }, 5000) // update every 5 seconds for visual effect
     }
 
     return () => {
       if (interval) clearInterval(interval)
     }
-  }, [tasks])
+  }, [tasks, incrementLoggedTime])
 
   const handlePlayPause = (taskId: string) => {
-    setTasks((prevTasks) =>
-      prevTasks.map((t) => {
-        if (t.id === taskId) {
-          const wasTracking = t.isTracking
-          return {
-            ...t,
-            status: wasTracking ? 'Pending' : 'In Progress',
-            isTracking: !wasTracking
-          }
-        }
-        // If we start tracking a task, pause all other tasks
-        if (t.isTracking) {
-          return { ...t, isTracking: false, status: 'Pending' }
-        }
-        return t
-      })
-    )
+    togglePlayPause(taskId)
   }
 
   const handleToggleComplete = (taskId: string) => {
-    setTasks((prevTasks) =>
-      prevTasks.map((t) => {
-        if (t.id === taskId) {
-          const isCompleted = t.status === 'Completed'
-          return {
-            ...t,
-            status: isCompleted ? 'Pending' : 'Completed',
-            isTracking: false // stop tracking if completed
-          }
-        }
-        return t
-      })
-    )
+    toggleComplete(taskId)
   }
 
   const handleAddNewTask = () => {
-    Alert.prompt(
-      'New Task',
-      'Enter task title:',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Add',
-          onPress: (title?: string) => {
-            if (!title) return
-            const newTask: Task = {
-              id: String(tasks.length + 1),
-              title,
-              priority: 'Medium',
-              priorityColor: '#eab308',
-              category: 'General',
-              estimatedTime: '2h',
-              loggedTime: 0,
-              status: 'Pending',
-              isTracking: false
-            }
-            setTasks((prev) => [newTask, ...prev])
-          }
-        }
-      ],
-      'plain-text'
-    )
+    router.push('/new-task')
   }
 
   // Filter tasks based on selected tab
