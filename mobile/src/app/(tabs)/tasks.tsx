@@ -1,38 +1,357 @@
-import React from 'react'
-import { StyleSheet, Text, View, ScrollView } from 'react-native'
+import React, { useState, useEffect } from 'react'
+import {
+  StyleSheet,
+  Text,
+  View,
+  ScrollView,
+  Pressable,
+  Alert,
+  Platform
+} from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Circle, Play } from 'lucide-react-native'
+import {
+  Clock,
+  Timer as TimerIcon,
+  Pause,
+  Play,
+  Check,
+  Plus
+} from 'lucide-react-native'
+
+interface Task {
+  id: string
+  title: string
+  priority: 'Critical' | 'High' | 'Medium' | 'Low'
+  priorityColor: string
+  category: string
+  estimatedTime: string
+  loggedTime: number // in hours
+  status: 'In Progress' | 'Pending' | 'Completed'
+  isTracking: boolean
+}
 
 export default function TasksScreen() {
-  const pendingTasks = [
-    { id: '1', title: 'Design user onboarding flow', category: 'Design', duration: '2h' },
-    { id: '2', title: 'Fix OAuth callback redirect bug', category: 'Backend', duration: '1h 30m' },
-    { id: '3', title: 'Optimize SQLite database indexes', category: 'Database', duration: '45m' }
-  ]
+  // Filter state: 'Today' | 'All' | 'In Progress' | 'Completed'
+  const [activeFilter, setActiveFilter] = useState<'Today' | 'All' | 'In Progress' | 'Completed'>('Today')
+
+  // Tasks state
+  const [tasks, setTasks] = useState<Task[]>([
+    {
+      id: '1',
+      title: 'Fix payment gateway timeout',
+      priority: 'Critical',
+      priorityColor: '#ef4444', // Red
+      category: 'Backend',
+      estimatedTime: '4h',
+      loggedTime: 2.5,
+      status: 'In Progress',
+      isTracking: true
+    },
+    {
+      id: '2',
+      title: 'Redesign onboarding flow screens',
+      priority: 'High',
+      priorityColor: '#f97316', // Orange
+      category: 'Frontend',
+      estimatedTime: '6h',
+      loggedTime: 1.0,
+      status: 'Pending',
+      isTracking: false
+    },
+    {
+      id: '3',
+      title: 'Configure CI/CD pipeline cache',
+      priority: 'Medium',
+      priorityColor: '#eab308', // Yellow
+      category: 'DevOps',
+      estimatedTime: '3h',
+      loggedTime: 3.2,
+      status: 'In Progress',
+      isTracking: false
+    },
+    {
+      id: '4',
+      title: 'Update API reference for v2 endpoints',
+      priority: 'Low',
+      priorityColor: '#10b981', // Green
+      category: 'Docs',
+      estimatedTime: '2h',
+      loggedTime: 0,
+      status: 'Pending',
+      isTracking: false
+    },
+    {
+      id: '5',
+      title: 'Add rate limiting middleware',
+      priority: 'Low',
+      priorityColor: '#10b981', // Green
+      category: 'Backend',
+      estimatedTime: '2h',
+      loggedTime: 1.8,
+      status: 'Completed',
+      isTracking: false
+    }
+  ])
+
+  // Timer simulation for active tracking task
+  useEffect(() => {
+    let interval: any = null
+
+    const trackingTask = tasks.find((t) => t.isTracking)
+    if (trackingTask) {
+      interval = setInterval(() => {
+        setTasks((prevTasks) =>
+          prevTasks.map((t) => {
+            if (t.isTracking) {
+              // Increment logged time by ~1 minute in hours (1/60th of an hour)
+              const updatedTime = Number((t.loggedTime + 0.01).toFixed(2))
+              return { ...t, loggedTime: updatedTime }
+            }
+            return t
+          })
+        )
+      }, 5000) // update every 5 seconds for visual effect
+    }
+
+    return () => {
+      if (interval) clearInterval(interval)
+    }
+  }, [tasks])
+
+  const handlePlayPause = (taskId: string) => {
+    setTasks((prevTasks) =>
+      prevTasks.map((t) => {
+        if (t.id === taskId) {
+          const wasTracking = t.isTracking
+          return {
+            ...t,
+            status: wasTracking ? 'Pending' : 'In Progress',
+            isTracking: !wasTracking
+          }
+        }
+        // If we start tracking a task, pause all other tasks
+        if (t.isTracking) {
+          return { ...t, isTracking: false, status: 'Pending' }
+        }
+        return t
+      })
+    )
+  }
+
+  const handleToggleComplete = (taskId: string) => {
+    setTasks((prevTasks) =>
+      prevTasks.map((t) => {
+        if (t.id === taskId) {
+          const isCompleted = t.status === 'Completed'
+          return {
+            ...t,
+            status: isCompleted ? 'Pending' : 'Completed',
+            isTracking: false // stop tracking if completed
+          }
+        }
+        return t
+      })
+    )
+  }
+
+  const handleAddNewTask = () => {
+    Alert.prompt(
+      'New Task',
+      'Enter task title:',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Add',
+          onPress: (title?: string) => {
+            if (!title) return
+            const newTask: Task = {
+              id: String(tasks.length + 1),
+              title,
+              priority: 'Medium',
+              priorityColor: '#eab308',
+              category: 'General',
+              estimatedTime: '2h',
+              loggedTime: 0,
+              status: 'Pending',
+              isTracking: false
+            }
+            setTasks((prev) => [newTask, ...prev])
+          }
+        }
+      ],
+      'plain-text'
+    )
+  }
+
+  // Filter tasks based on selected tab
+  const filteredTasks = tasks.filter((task) => {
+    if (activeFilter === 'Today') return task.status !== 'Completed' // Show active tasks
+    if (activeFilter === 'All') return true
+    if (activeFilter === 'In Progress') return task.status === 'In Progress'
+    if (activeFilter === 'Completed') return task.status === 'Completed'
+    return true
+  })
+
+  const inProgressCount = tasks.filter((t) => t.status === 'In Progress').length
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Your Tasks</Text>
-        <Text style={styles.subtitle}>Manage your work agenda for today</Text>
+        
+        {/* Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.title}>Tasks</Text>
+            <Text style={styles.subtitle}>
+              {tasks.length} tasks · {inProgressCount} in progress
+            </Text>
+          </View>
+          <Pressable
+            onPress={handleAddNewTask}
+            style={({ pressed }) => [
+              styles.plusButton,
+              pressed && styles.pressed
+            ]}
+          >
+            <Plus size={24} color="#ffffff" />
+          </Pressable>
+        </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Active Tasks</Text>
-          {pendingTasks.map((task) => (
-            <View key={task.id} style={styles.taskCard}>
-              <View style={styles.taskLeft}>
-                <Circle size={20} color="#a1a1a1" style={{ marginRight: 12 }} />
-                <View style={styles.meta}>
-                  <Text style={styles.taskTitle}>{task.title}</Text>
-                  <Text style={styles.category}>{task.category} · {task.duration}</Text>
+        {/* Filter Scroll Row */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filtersRow}
+          contentContainerStyle={styles.filtersContainer}
+        >
+          {(['Today', 'All', 'In Progress', 'Completed'] as const).map((filter) => {
+            const isActive = activeFilter === filter
+            return (
+              <Pressable
+                key={filter}
+                onPress={() => setActiveFilter(filter)}
+                style={[
+                  styles.filterChip,
+                  isActive ? styles.filterChipActive : styles.filterChipInactive
+                ]}
+              >
+                <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
+                  {filter}
+                </Text>
+              </Pressable>
+            )
+          })}
+        </ScrollView>
+
+        {/* Task Cards list */}
+        <View style={styles.tasksList}>
+          {filteredTasks.map((task) => {
+            const isCompleted = task.status === 'Completed'
+            return (
+              <View
+                key={task.id}
+                style={[
+                  styles.taskCard,
+                  isCompleted && styles.taskCardCompleted
+                ]}
+              >
+                {/* Priority left border indicator */}
+                <View style={[styles.priorityBorder, { backgroundColor: task.priorityColor }]} />
+
+                <View style={styles.cardInner}>
+                  <View style={styles.cardContent}>
+                    {/* Header tags */}
+                    <View style={styles.cardHeader}>
+                      <Text style={[styles.priorityText, { color: task.priorityColor }]}>
+                        {task.priority.toUpperCase()}
+                      </Text>
+                      <View style={styles.categoryBadge}>
+                        <Text style={styles.categoryBadgeText}>{task.category}</Text>
+                      </View>
+                    </View>
+
+                    {/* Task Title */}
+                    <Text
+                      style={[
+                        styles.taskTitle,
+                        isCompleted && styles.taskTitleCompleted
+                      ]}
+                      numberOfLines={2}
+                    >
+                      {task.title}
+                    </Text>
+
+                    {/* Footer indicators */}
+                    <View style={styles.cardFooter}>
+                      <View style={styles.metaItem}>
+                        <Clock size={14} color="#a1a1a1" />
+                        <Text style={styles.metaText}>{task.estimatedTime}</Text>
+                      </View>
+                      <View style={styles.metaItem}>
+                        <TimerIcon size={14} color="#a1a1a1" />
+                        <Text style={styles.metaText}>{task.loggedTime}h</Text>
+                      </View>
+                      
+                      {/* Status badges */}
+                      {task.status === 'In Progress' && (
+                        <View style={[styles.statusBadge, styles.inProgressBadge]}>
+                          <Text style={styles.inProgressBadgeText}>In Progress</Text>
+                        </View>
+                      )}
+                      {task.status === 'Pending' && (
+                        <View style={[styles.statusBadge, styles.pendingBadge]}>
+                          <Text style={styles.pendingBadgeText}>Pending</Text>
+                        </View>
+                      )}
+                      {task.status === 'Completed' && (
+                        <View style={[styles.statusBadge, styles.completedBadge]}>
+                          <Text style={styles.completedBadgeText}>Completed</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+
+                  {/* Actions column */}
+                  <View style={styles.actionColumn}>
+                    {isCompleted ? (
+                      <Pressable
+                        onPress={() => handleToggleComplete(task.id)}
+                        style={styles.checkButton}
+                      >
+                        <Check size={16} color="#10b981" strokeWidth={3} />
+                      </Pressable>
+                    ) : (
+                      <Pressable
+                        onPress={() => handlePlayPause(task.id)}
+                        style={[
+                          styles.playPauseButton,
+                          task.isTracking && styles.pauseButtonActive
+                        ]}
+                      >
+                        {task.isTracking ? (
+                          <Pause size={16} color="#ffffff" />
+                        ) : (
+                          <Play size={16} color="#ffffff" style={{ marginLeft: 2 }} />
+                        )}
+                      </Pressable>
+                    )}
+
+                    {/* Long press/tap target for completing a pending task */}
+                    {!isCompleted && (
+                      <Pressable
+                        onPress={() => handleToggleComplete(task.id)}
+                        style={styles.markCompleteTap}
+                      >
+                        <Text style={styles.markCompleteTapText}>Done</Text>
+                      </Pressable>
+                    )}
+                  </View>
                 </View>
               </View>
-              <View style={styles.playButton}>
-                <Play size={14} color="#ffffff" fill="#ffffff" />
-              </View>
-            </View>
-          ))}
+            )
+          })}
         </View>
+
       </ScrollView>
     </SafeAreaView>
   )
@@ -44,65 +363,219 @@ const styles = StyleSheet.create({
     backgroundColor: '#0a0a0a'
   },
   scrollContent: {
-    paddingHorizontal: 24,
     paddingTop: 20,
-    paddingBottom: 100
+    paddingBottom: 120 // Allow extra spacing for bottom tabs
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    marginBottom: 20
   },
   title: {
     color: '#ffffff',
-    fontSize: 24,
+    fontSize: 32,
     fontWeight: 'bold',
-    marginBottom: 4
+    letterSpacing: -0.5
   },
   subtitle: {
     color: '#a1a1a1',
     fontSize: 14,
-    marginBottom: 28
+    marginTop: 4
   },
-  section: {
-    flexDirection: 'column',
-    gap: 12
-  },
-  sectionTitle: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 4
-  },
-  taskCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  plusButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#208AEF',
+    justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#171717',
+    shadowColor: '#208AEF',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 6
+  },
+  pressed: {
+    opacity: 0.8
+  },
+  filtersRow: {
+    maxHeight: 50,
+    marginBottom: 20,
+    paddingLeft: 24
+  },
+  filtersContainer: {
+    paddingRight: 40,
+    gap: 8
+  },
+  filterChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  filterChipActive: {
+    backgroundColor: '#208AEF'
+  },
+  filterChipInactive: {
+    backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 16,
-    padding: 16
+    borderColor: 'rgba(255, 255, 255, 0.1)'
   },
-  taskLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1
-  },
-  meta: {
-    flexDirection: 'column',
-    gap: 2
-  },
-  taskTitle: {
-    color: '#ffffff',
+  filterChipText: {
+    color: '#a1a1a1',
     fontSize: 14,
     fontWeight: '500'
   },
-  category: {
-    color: '#a1a1a1',
-    fontSize: 11
+  filterChipTextActive: {
+    color: '#ffffff'
   },
-  playButton: {
-    width: 32,
-    height: 32,
+  tasksList: {
+    flexDirection: 'column',
+    gap: 16,
+    paddingHorizontal: 24
+  },
+  taskCard: {
+    backgroundColor: '#171717',
     borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    overflow: 'hidden',
+    position: 'relative'
+  },
+  taskCardCompleted: {
+    opacity: 0.7
+  },
+  priorityBorder: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 6
+  },
+  cardInner: {
+    flexDirection: 'row',
+    padding: 16,
+    paddingLeft: 20,
+    justifyContent: 'space-between',
+    alignItems: 'flex-start'
+  },
+  cardContent: {
+    flex: 1,
+    flexDirection: 'column',
+    gap: 6
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8
+  },
+  priorityText: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.8
+  },
+  categoryBadge: {
+    backgroundColor: '#262626',
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: 12
+  },
+  categoryBadgeText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '500'
+  },
+  taskTitle: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '700',
+    lineHeight: 22,
+    marginTop: 4
+  },
+  taskTitleCompleted: {
+    textDecorationLine: 'line-through',
+    color: '#737373'
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 10
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4
+  },
+  metaText: {
+    color: '#a1a1a1',
+    fontSize: 12,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace'
+  },
+  statusBadge: {
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: 10
+  },
+  inProgressBadge: {
+    backgroundColor: 'rgba(32, 138, 239, 0.25)'
+  },
+  inProgressBadgeText: {
+    color: '#90caf9',
+    fontSize: 11,
+    fontWeight: '600'
+  },
+  pendingBadge: {
+    backgroundColor: '#262626'
+  },
+  pendingBadgeText: {
+    color: '#a1a1a1',
+    fontSize: 11,
+    fontWeight: '600'
+  },
+  completedBadge: {
+    backgroundColor: 'rgba(16, 185, 129, 0.2)'
+  },
+  completedBadgeText: {
+    color: '#10b981',
+    fontSize: 11,
+    fontWeight: '600'
+  },
+  actionColumn: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 8,
+    marginLeft: 12
+  },
+  playPauseButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#208AEF',
     justifyContent: 'center',
     alignItems: 'center'
+  },
+  pauseButtonActive: {
+    backgroundColor: '#208AEF' // stays blue
+  },
+  checkButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#262626',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  markCompleteTap: {
+    paddingVertical: 4,
+    paddingHorizontal: 8
+  },
+  markCompleteTapText: {
+    color: '#208AEF',
+    fontSize: 12,
+    fontWeight: '600'
   }
 })
