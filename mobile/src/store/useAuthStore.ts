@@ -5,8 +5,11 @@ import {
   createUserWithEmailAndPassword, 
   signOut as firebaseSignOut, 
   onAuthStateChanged,
-  updateProfile
+  updateProfile,
+  signInWithCredential,
+  GoogleAuthProvider
 } from 'firebase/auth';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { auth } from '../services/firebase';
 
 interface AuthState {
@@ -16,6 +19,7 @@ interface AuthState {
   
   // Actions
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   register: (email: string, password: string, firstName: string, lastName: string) => Promise<void>;
   logout: () => Promise<void>;
   initializeAuthListener: () => () => void;
@@ -39,6 +43,46 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
+  loginWithGoogle: async () => {
+    set({ isLoading: true });
+    try {
+      const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+      if (!webClientId || webClientId === 'YOUR_GOOGLE_WEB_CLIENT_ID_HERE') {
+        throw new Error('Google Web Client ID is not configured in mobile/.env');
+      }
+
+      GoogleSignin.configure({
+        webClientId: webClientId,
+      });
+
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      const response = await GoogleSignin.signIn();
+      
+      // Safely narrow down type depending on google-signin library version
+      let idToken: string | null = null;
+      if (response && 'type' in response) {
+        if (response.type === 'success' && response.data) {
+          idToken = response.data.idToken;
+        } else {
+          throw new Error('Google Sign-In: Operation cancelled or failed.');
+        }
+      } else if (response && 'idToken' in response) {
+        idToken = (response as any).idToken;
+      }
+
+      if (!idToken) {
+        throw new Error('Google Sign-In: No ID Token retrieved.');
+      }
+
+      const credential = GoogleAuthProvider.credential(idToken);
+      await signInWithCredential(auth, credential);
+    } catch (error) {
+      set({ isLoading: false });
+      console.error('Failed to login with Google', error);
+      throw error;
+    }
+  },
+
   register: async (email: string, password: string, firstName: string, lastName: string) => {
     set({ isLoading: true });
     try {
@@ -48,8 +92,6 @@ export const useAuthStore = create<AuthState>((set) => ({
         displayName: displayName,
         photoURL: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80'
       });
-      
-      // The onAuthStateChanged listener will automatically pick up the new user and updated profile.
     } catch (error) {
       set({ isLoading: false });
       console.error('Failed to register with Firebase', error);
@@ -61,6 +103,11 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true });
     try {
       await firebaseSignOut(auth);
+      try {
+        await GoogleSignin.signOut();
+      } catch (e) {
+        console.warn('Google Sign-out warning (not critical):', e);
+      }
     } catch (error) {
       console.error('Failed to log out from Firebase', error);
       set({ isLoading: false });

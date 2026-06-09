@@ -18,7 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const login = useAuthStore((state) => state.login);
+  const { login, loginWithGoogle } = useAuthStore();
   const scheme = useColorScheme();
   const themeColors = Colors[scheme === 'unspecified' || !scheme ? 'light' : scheme];
 
@@ -26,7 +26,9 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [generalError, setGeneralError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const validate = () => {
     let valid = true;
@@ -57,6 +59,7 @@ export default function LoginScreen() {
     if (!validate()) return;
 
     setLoading(true);
+    setGeneralError('');
     try {
       await login(email, password);
       setLoading(false);
@@ -65,8 +68,27 @@ export default function LoginScreen() {
       console.error(error);
       if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
         setPasswordError('Invalid email or password');
+      } else if (error.code === 'auth/configuration-not-found') {
+        setGeneralError('Email/Password login is disabled in your Firebase console. Go to Authentication > Sign-in method and enable it.');
       } else {
         setPasswordError(error.message || 'Authentication failed. Please try again.');
+      }
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setGoogleLoading(true);
+    setGeneralError('');
+    try {
+      await loginWithGoogle();
+      setGoogleLoading(false);
+    } catch (error: any) {
+      setGoogleLoading(false);
+      console.error(error);
+      if (error.message && error.message.includes('not configured')) {
+        setGeneralError('Google Client ID is not configured in mobile/.env. Please configure EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID.');
+      } else {
+        setGeneralError(error.message || 'Google Sign-In failed.');
       }
     }
   };
@@ -85,6 +107,9 @@ export default function LoginScreen() {
             <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
               Sign in to continue to Fexo
             </Text>
+            {generalError ? (
+              <Text style={styles.generalErrorText}>{generalError}</Text>
+            ) : null}
           </View>
 
           <View style={styles.formContainer}>
@@ -125,6 +150,21 @@ export default function LoginScreen() {
               onPress={handleLogin}
               loading={loading}
               style={styles.loginButton}
+            />
+
+            <View style={styles.dividerContainer}>
+              <View style={[styles.divider, { backgroundColor: scheme === 'dark' ? '#2E3135' : '#E0E1E6' }]} />
+              <Text style={[styles.dividerText, { color: themeColors.textSecondary }]}>or</Text>
+              <View style={[styles.divider, { backgroundColor: scheme === 'dark' ? '#2E3135' : '#E0E1E6' }]} />
+            </View>
+
+            <Button
+              title="Continue with Google"
+              onPress={handleGoogleLogin}
+              loading={googleLoading}
+              variant="outline"
+              style={styles.googleButton}
+              textStyle={{ color: themeColors.text }}
             />
           </View>
 
@@ -198,5 +238,30 @@ const styles = StyleSheet.create({
     color: '#208AEF',
     fontWeight: 'bold',
     fontSize: 14,
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+  },
+  dividerText: {
+    marginHorizontal: 12,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  googleButton: {
+    marginTop: 0,
+    backgroundColor: 'transparent',
+  },
+  generalErrorText: {
+    color: '#FF453A',
+    fontSize: 14,
+    marginTop: 12,
+    textAlign: 'center',
+    fontWeight: '500',
   },
 });
