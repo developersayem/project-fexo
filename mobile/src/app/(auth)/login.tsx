@@ -57,27 +57,18 @@ export default function LoginScreen() {
     if (!validate()) return;
 
     setLoading(true);
-    // Simulate API request delay
-    setTimeout(async () => {
-      try {
-        const mockUser = {
-          id: '1',
-          email: email.toLowerCase(),
-          firstName: 'John',
-          lastName: 'Doe',
-          avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80',
-        };
-        const mockToken = 'mock_jwt_token_xyz_123';
-
-        await login(mockUser, mockToken);
-        setLoading(false);
-        // Navigate to the main application
-        router.replace('/');
-      } catch (error) {
-        setLoading(false);
-        console.error(error);
+    try {
+      await login(email, password);
+      setLoading(false);
+    } catch (error: any) {
+      setLoading(false);
+      console.error(error);
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        setPasswordError('Invalid email or password');
+      } else {
+        setPasswordError(error.message || 'Authentication failed. Please try again.');
       }
-    }, 1500);
+    }
   };
 
   return (

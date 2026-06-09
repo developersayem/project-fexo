@@ -18,7 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const login = useAuthStore((state) => state.login);
+  const register = useAuthStore((state) => state.register);
   const scheme = useColorScheme();
   const themeColors = Colors[scheme === 'unspecified' || !scheme ? 'light' : scheme];
 
@@ -68,27 +68,18 @@ export default function RegisterScreen() {
     if (!validate()) return;
 
     setLoading(true);
-    // Simulate API request delay
-    setTimeout(async () => {
-      try {
-        const mockUser = {
-          id: '2',
-          email: email.toLowerCase(),
-          firstName,
-          lastName,
-          avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&h=150&q=80',
-        };
-        const mockToken = 'mock_jwt_token_register_987';
-
-        await login(mockUser, mockToken);
-        setLoading(false);
-        // Navigate to the main application
-        router.replace('/');
-      } catch (error) {
-        setLoading(false);
-        console.error(error);
+    try {
+      await register(email, password, firstName, lastName);
+      setLoading(false);
+    } catch (error: any) {
+      setLoading(false);
+      console.error(error);
+      if (error.code === 'auth/email-already-in-use') {
+        setEmailError('This email is already registered.');
+      } else {
+        setPasswordError(error.message || 'Registration failed. Please try again.');
       }
-    }, 1500);
+    }
   };
 
   return (

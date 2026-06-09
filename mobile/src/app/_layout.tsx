@@ -18,14 +18,15 @@ function RootLayoutNav() {
   const scheme = useColorScheme();
   const themeColors = Colors[scheme === 'unspecified' || !scheme ? 'light' : scheme];
   
-  const { checkAuth, isAuthenticated, isLoading } = useAuthStore();
+  const { initializeAuthListener, isAuthenticated, isLoading } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
 
-  // Initialize auth state
+  // Initialize auth state listener
   useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
+    const unsub = initializeAuthListener();
+    return () => unsub();
+  }, [initializeAuthListener]);
 
   // Protect routes and redirect based on auth state
   useEffect(() => {
