@@ -404,42 +404,44 @@ export default function App(): React.JSX.Element {
       {/* Main Content Area */}
       <div className="min-h-screen bg-neutral-950 flex flex-col flex-1 overflow-hidden">
         {/* Main Content Header */}
-        <div className="bg-neutral-950 border-white/10 border-t-0 border-r-0 border-b-1 border-l-0 border-solid flex px-8 py-6 justify-between items-center min-h-[81px]">
-          {activeTab === 'Tasks' ? (
-            <>
+        {activeTab !== 'Settings' && (
+          <div className="bg-neutral-950 border-white/10 border-t-0 border-r-0 border-b-1 border-l-0 border-solid flex px-8 py-6 justify-between items-center min-h-[81px]">
+            {activeTab === 'Tasks' ? (
+              <>
+                <div className="flex flex-col gap-1">
+                  <h1 className="font-bold text-neutral-50 text-2xl leading-8 tracking-tight">
+                    Tasks
+                  </h1>
+                  <p className="text-[#a1a1a1] text-sm leading-5">
+                    {tasks.length} tasks · {tasks.filter((t) => t.status === 'In Progress').length}{' '}
+                    in progress
+                  </p>
+                </div>
+                <TasksHeader
+                  searchQuery={searchQuery}
+                  setSearchQuery={setSearchQuery}
+                  newTaskListTitle={newTaskListTitle}
+                  setNewTaskListTitle={setNewTaskListTitle}
+                  handleAddTask={handleAddTask}
+                />
+              </>
+            ) : activeTab === 'Calendar' ? (
+              <CalendarHeader currentMonth={calendarMonth} onMonthToggle={handleMonthToggle} />
+            ) : activeTab === 'Analytics' ? (
+              <AnalyticsHeader
+                analyticsFilter={analyticsFilter}
+                setAnalyticsFilter={setAnalyticsFilter}
+              />
+            ) : (
               <div className="flex flex-col gap-1">
                 <h1 className="font-bold text-neutral-50 text-2xl leading-8 tracking-tight">
-                  Tasks
+                  {activeTab}
                 </h1>
-                <p className="text-[#a1a1a1] text-sm leading-5">
-                  {tasks.length} tasks · {tasks.filter((t) => t.status === 'In Progress').length} in
-                  progress
-                </p>
+                <p className="text-[#a1a1a1] text-sm leading-5">{currentDayStr}</p>
               </div>
-              <TasksHeader
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-                newTaskListTitle={newTaskListTitle}
-                setNewTaskListTitle={setNewTaskListTitle}
-                handleAddTask={handleAddTask}
-              />
-            </>
-          ) : activeTab === 'Calendar' ? (
-            <CalendarHeader currentMonth={calendarMonth} onMonthToggle={handleMonthToggle} />
-          ) : activeTab === 'Analytics' ? (
-            <AnalyticsHeader
-              analyticsFilter={analyticsFilter}
-              setAnalyticsFilter={setAnalyticsFilter}
-            />
-          ) : (
-            <div className="flex flex-col gap-1">
-              <h1 className="font-bold text-neutral-50 text-2xl leading-8 tracking-tight">
-                {activeTab}
-              </h1>
-              <p className="text-[#a1a1a1] text-sm leading-5">{currentDayStr}</p>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
 
         {/* Dynamic Panels Switcher */}
         {activeTab === 'Dashboard' ? (
