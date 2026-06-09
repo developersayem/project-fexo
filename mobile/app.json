@@ -18,7 +18,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.developersayem.mobile"
+      "package": "com.developersayem.fexo"
     },
     "web": {
       "output": "static",
