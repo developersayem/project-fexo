@@ -372,6 +372,7 @@ interface DashboardSidebarProps {
   handleTogglePlayPause: (id: string) => void
   handleToggleComplete: (id: string) => void
   handleStopTask: (id: string) => void
+  onStartFocus: (id: string) => void
 }
 
 export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
@@ -386,7 +387,8 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
   formatTime,
   handleTogglePlayPause,
   handleToggleComplete,
-  handleStopTask
+  handleStopTask,
+  onStartFocus
 }) => {
   const ringPerimeter3 = 2 * Math.PI * 54
   const offset3 = activeTask
@@ -430,8 +432,15 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
             </div>
 
             {/* Circular Dial */}
-            <div className="relative size-32">
-              <svg className="size-32 -rotate-90" viewBox="0 0 128 128">
+            <div
+              onClick={() => activeTask && onStartFocus(activeTask.id)}
+              className={`relative size-32 ${activeTask ? 'cursor-pointer group hover:scale-[1.03] transition-all duration-300' : ''}`}
+              title={activeTask ? 'Click to enter full-screen Focus Mode' : undefined}
+            >
+              <svg
+                className="size-32 -rotate-90 group-hover:drop-shadow-[0_0_8px_oklch(0.488_0.243_264.376/30%)] transition-all"
+                viewBox="0 0 128 128"
+              >
                 <circle
                   cx="64"
                   cy="64"
@@ -459,11 +468,11 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
                 </linearGradient>
               </defs>
               <div className="flex absolute inset-0 flex-col justify-center items-center gap-0.5">
-                <span className="tabular-nums font-mono font-bold text-neutral-50 text-xl leading-7">
+                <span className="tabular-nums font-mono font-bold text-neutral-50 text-xl leading-7 group-hover:text-[oklch(0.488_0.243_264.376)] transition-colors">
                   {activeTask ? formatTime(activeTask.loggedTime) : '00:00:00'}
                 </span>
-                <span className="text-[oklch(0.708_0_0)] uppercase text-[10px] tracking-widest">
-                  Elapsed
+                <span className="text-[oklch(0.708_0_0)] group-hover:text-neutral-300 uppercase text-[10px] tracking-widest transition-colors">
+                  {activeTask ? 'Maximize' : 'Elapsed'}
                 </span>
               </div>
             </div>

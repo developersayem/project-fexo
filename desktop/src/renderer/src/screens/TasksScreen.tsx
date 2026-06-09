@@ -291,13 +291,15 @@ interface TasksSidebarProps {
   setSelectedTaskId: (id: string) => void
   formatTime: (secs: number) => string
   handleTogglePlayPause: (id: string) => void
+  onStartFocus: (id: string) => void
 }
 
 export const TasksSidebar: React.FC<TasksSidebarProps> = ({
   selectedTask,
   setSelectedTaskId,
   formatTime,
-  handleTogglePlayPause
+  handleTogglePlayPause,
+  onStartFocus
 }) => {
   return (
     <div className="min-h-screen bg-[oklch(0.205_0_0)] shrink-0 border-white/10 border-t-0 border-r-0 border-b-0 border-l-1 border-solid flex flex-col gap-0 w-72">
@@ -442,13 +444,41 @@ export const TasksSidebar: React.FC<TasksSidebarProps> = ({
 
       {/* Sidebar bottom action */}
       {selectedTask && (
-        <div className="border-white/10 border-t border-r-0 border-b-0 border-l-0 border-solid p-6">
+        <div className="border-white/10 border-t border-r-0 border-b-0 border-l-0 border-solid p-6 flex flex-col gap-2">
+          {selectedTask.status === 'In Progress' && (
+            <Button
+              onClick={() => onStartFocus(selectedTask.id)}
+              className="bg-[linear-gradient(135deg,oklch(0.488_0.243_264.376),oklch(0.627_0.265_303.9))] text-neutral-900 font-bold rounded-xl text-sm leading-5 flex py-2.5 justify-center items-center gap-2 w-full border-none shadow-lg shadow-primary/20 cursor-pointer animate-pulse"
+            >
+              <Zap className="size-4" />
+              <span>Maximize Focus</span>
+            </Button>
+          )}
           <Button
-            onClick={() => handleTogglePlayPause(selectedTask.id)}
-            className="bg-[oklch(0.488_0.243_264.376)] font-semibold rounded-xl text-white text-sm leading-5 flex py-2.5 justify-center items-center gap-2 w-full"
+            onClick={() => {
+              const wasInProgress = selectedTask.status === 'In Progress'
+              handleTogglePlayPause(selectedTask.id)
+              if (!wasInProgress) {
+                onStartFocus(selectedTask.id)
+              }
+            }}
+            className={`${
+              selectedTask.status === 'In Progress'
+                ? 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300'
+                : 'bg-[oklch(0.488_0.243_264.376)] text-white'
+            } font-semibold rounded-xl text-sm leading-5 flex py-2.5 justify-center items-center gap-2 w-full cursor-pointer`}
           >
-            <Zap className="size-4" />
-            <span>{selectedTask.status === 'In Progress' ? 'Pause Focus' : 'Start Focus'}</span>
+            {selectedTask.status === 'In Progress' ? (
+              <>
+                <Pause className="size-4" />
+                <span>Pause Focus</span>
+              </>
+            ) : (
+              <>
+                <Zap className="size-4" />
+                <span>Start Focus</span>
+              </>
+            )}
           </Button>
         </div>
       )}

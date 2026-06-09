@@ -12,7 +12,8 @@ import {
   X,
   Pause,
   Check,
-  Square
+  Square,
+  Maximize2
 } from 'lucide-react'
 import { useAppStore } from '@renderer/store/useAppStore'
 import { Task } from './types/task'
@@ -23,6 +24,7 @@ import { CalendarHeader, CalendarContent, CalendarSidebar } from './screens/Cale
 import { AnalyticsHeader, AnalyticsContent, AnalyticsSidebar } from './screens/AnalyticsScreen'
 import { SettingsContent } from './screens/SettingsScreen'
 import { ProjectsContent } from './screens/ProjectsScreen'
+import { FocusScreen } from './screens/FocusScreen'
 
 export default function App(): React.JSX.Element {
   const { theme, username, settingsLoaded, loadSettings, setTheme, setUsername, resetSettings } =
@@ -32,6 +34,8 @@ export default function App(): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<
     'Dashboard' | 'Tasks' | 'Calendar' | 'Analytics' | 'Projects' | 'Settings'
   >('Dashboard')
+
+  const [isFocusActive, setIsFocusActive] = useState(false)
 
   // General search / filters
   const [searchQuery, setSearchQuery] = useState('')
@@ -330,6 +334,22 @@ export default function App(): React.JSX.Element {
     )
   }
 
+  if (isFocusActive) {
+    return (
+      <FocusScreen
+        activeTask={activeTask}
+        formatTime={formatTime}
+        onTogglePlayPause={() => activeTask && handleTogglePlayPause(activeTask.id)}
+        onToggleComplete={() => activeTask && handleToggleComplete(activeTask.id)}
+        onStop={() => {
+          if (activeTask) handleStopTask(activeTask.id)
+          setIsFocusActive(false)
+        }}
+        onExitFocus={() => setIsFocusActive(false)}
+      />
+    )
+  }
+
   return (
     <div className="bg-neutral-950 text-neutral-50 w-full min-h-screen overflow-x-hidden flex flex-row">
       {/* Sidebar Navigation */}
@@ -482,6 +502,7 @@ export default function App(): React.JSX.Element {
           handleTogglePlayPause={handleTogglePlayPause}
           handleToggleComplete={handleToggleComplete}
           handleStopTask={handleStopTask}
+          onStartFocus={() => setIsFocusActive(true)}
         />
       ) : activeTab === 'Tasks' ? (
         <TasksSidebar
@@ -489,6 +510,7 @@ export default function App(): React.JSX.Element {
           setSelectedTaskId={setSelectedTaskId}
           formatTime={formatTime}
           handleTogglePlayPause={handleTogglePlayPause}
+          onStartFocus={() => setIsFocusActive(true)}
         />
       ) : activeTab === 'Calendar' ? (
         <CalendarSidebar />
@@ -512,6 +534,15 @@ export default function App(): React.JSX.Element {
                 </span>
               </div>
               <div className="flex items-center gap-1.5">
+                {activeTask && (
+                  <button
+                    onClick={() => setIsFocusActive(true)}
+                    className="size-5 rounded-sm flex justify-center items-center hover:bg-neutral-800 text-neutral-400 border-none bg-transparent cursor-pointer"
+                    title="Maximize Focus Mode"
+                  >
+                    <Maximize2 className="size-3" />
+                  </button>
+                )}
                 <button
                   onClick={() => setWidgetMinimized(!widgetMinimized)}
                   className="size-5 rounded-sm flex justify-center items-center hover:bg-neutral-800 text-neutral-400 border-none bg-transparent cursor-pointer"
@@ -541,8 +572,12 @@ export default function App(): React.JSX.Element {
                   </span>
                 </div>
 
-                <div className="flex py-1 justify-center items-center">
-                  <span className="font-mono font-bold text-neutral-50 text-2xl leading-8 tracking-widest tabular-nums">
+                <div
+                  onClick={() => activeTask && setIsFocusActive(true)}
+                  className="flex py-1 justify-center items-center cursor-pointer hover:bg-neutral-800/40 rounded-lg transition-colors group"
+                  title="Click to maximize Focus Mode"
+                >
+                  <span className="font-mono font-bold text-neutral-50 group-hover:text-[oklch(0.488_0.243_264.376)] text-2xl leading-8 tracking-widest tabular-nums transition-colors">
                     {activeTask ? formatTime(activeTask.loggedTime) : '00:00:00'}
                   </span>
                 </div>
