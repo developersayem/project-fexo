@@ -109,7 +109,7 @@ export const SettingsContent: React.FC<SettingsContentProps> = ({
     {
       id: 'startOnLaunch',
       title: 'Start on Launch',
-      desc: 'Open DevTrack when your computer starts',
+      desc: 'Open Fexo when your computer starts',
       state: startOnLaunch,
       setState: setStartOnLaunch
     }

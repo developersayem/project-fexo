@@ -8,9 +8,7 @@ export const ProjectsContent: React.FC = () => {
         <FolderOpen className="size-6 text-neutral-500" />
       </div>
       <div>
-        <h3 className="font-semibold text-neutral-200 text-base leading-6">
-          DevTrack Projects Module
-        </h3>
+        <h3 className="font-semibold text-neutral-200 text-base leading-6">Fexo Projects Module</h3>
         <p className="text-[oklch(0.708_0_0)] text-xs leading-4 mt-1">
           This dashboard is currently under active development.
         </p>

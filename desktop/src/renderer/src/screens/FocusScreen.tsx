@@ -76,7 +76,7 @@ export const FocusScreen: React.FC<FocusScreenProps> = ({
             <Zap className="size-5 text-neutral-900" />
           </div>
           <div className="flex flex-col">
-            <span className="leading-none font-semibold text-lg">DevTrack</span>
+            <span className="leading-none font-semibold text-lg">Fexo</span>
             <span className="text-[#a1a1a1] text-[10px] tracking-wider uppercase mt-0.5">
               Productivity OS
             </span>

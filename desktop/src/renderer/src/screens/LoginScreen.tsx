@@ -41,10 +41,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
         </div>
 
         <h1 className="font-bold text-3xl leading-9 text-neutral-50 tracking-tight text-center">
-          DevTrack
+          Fexo
         </h1>
         <p className="text-[#a1a1a1] text-xs leading-4 tracking-wider uppercase mt-1">
-          Productivity OS
+          Productivity App
         </p>
 
         <p className="text-center text-sm text-[#a1a1a1] mt-6 leading-relaxed">

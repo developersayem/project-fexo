@@ -328,7 +328,7 @@ export default function App(): React.JSX.Element {
       <div className="flex h-screen w-screen items-center justify-center bg-neutral-950 text-white font-sans">
         <div className="flex flex-col items-center gap-4">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-t-blue-500 border-white/20" />
-          <span className="text-sm font-medium">Loading DevTrack Workspace...</span>
+          <span className="text-sm font-medium">Loading Fexo Workspace...</span>
         </div>
       </div>
     )
@@ -359,9 +359,7 @@ export default function App(): React.JSX.Element {
           <div className="size-8 bg-[oklch(0.488_0.243_264.376)] rounded-lg flex justify-center items-center">
             <Zap className="size-4 text-white" />
           </div>
-          <span className="font-bold text-neutral-50 text-lg leading-7 tracking-tight">
-            DevTrack
-          </span>
+          <span className="font-bold text-neutral-50 text-lg leading-7 tracking-tight">Fexo</span>
         </div>
 
         {/* Sidebar Nav Actions */}
@@ -570,7 +568,7 @@ export default function App(): React.JSX.Element {
                   <span className="text-[#a1a1a1] text-xs leading-4">
                     {activeTask
                       ? `${activeTask.category} · ${activeTask.priority}`
-                      : 'DevTrack Session'}
+                      : 'Fexo Session'}
                   </span>
                 </div>
 
@@ -621,7 +619,7 @@ export default function App(): React.JSX.Element {
                   {activeTask ? formatTime(activeTask.loggedTime) : '00:00:00'}
                 </span>
                 <span className="text-[10px] text-neutral-500 truncate max-w-[120px]">
-                  {activeTask ? activeTask.title : 'DevTrack'}
+                  {activeTask ? activeTask.title : 'Fexo'}
                 </span>
               </div>
             )}
